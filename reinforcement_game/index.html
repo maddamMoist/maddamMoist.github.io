@@ -140,7 +140,7 @@
 				console.log(learningWins[i][q]);
 			}
 		}*/
-		console.log("yo2");
+		console.log("yo3");
 		
 		messageText = new createjs.Text("choose an image", "20px Arial", "#000000");
 		messageText.lineWidth = 200;
@@ -249,7 +249,6 @@
 						delay = DELAY;
 						messageText.text = "Test time!";
 						messageText.color = "#000000";
-						console.log("test time");
 						leftImage.visible = rightImage.visible = false;
 					break;
 					case END:
@@ -271,9 +270,9 @@
 						}
 						messageText.text = "positive learning: " + (posCount/4) + "\nnegative learning: " + (negCount/4);
 						messageText.color = "#000000";
-						stage.update();
 					break;
 				}
+				stage.update();
 			}
 		}
 	}
@@ -309,7 +308,6 @@
 					}
 					shuffle(randArr);
 					state = WAIT_TESTING;
-					console.log("WAIT_TESTING");
 					delay = DELAY;
 				}
 				else
