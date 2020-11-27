@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+    <title>reinforcement test</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style>
+		html, body {
+			overflow: hidden;
+			height:100%;
+		}
+	</style>
+	<script src="easeljs.min.js"></script>
+	<script src="tweenjs.min.js"></script>
+</head>
+
+<body onload="init();">
+<div id="content">
+	<canvas id="gameCanvas" width="350" height="300"
+			style="background:black;"></canvas>
+</div>
+
+<script type = "text/javascript">
+	var canvas;
+	var scaleAll;
+	var stage;
+	var containAll;
+	var origW = 400;
+	var origH = 250;
+	var pics = [];
+	//var pairs = [];
+	var PIC_COUNT = 6;
+	var PAIR_COUNT = 3;
+	var picLoadCount = 0;
+	var PIC_SIZE = 143;
+	var messageText;
+	var LEFT = 0;
+	var RIGHT = 1;
+	var LEARN_RUNS = 8;
+	var learningWins = [[],[],[]];
+	//var TEST_RUNS = 6;
+	var testCount = 0;
+	var WIN_RATIOS = [0.8, 0.7, 0.6];
+	//var outcomes = [[0,0], [0,0], [0,0]];
+	var testChoices = [[0,0,0,0],[0,0,0,0]];
+	//var currentLeftWinRatios = [LEFT_WIN_RATIOS[0],LEFT_WIN_RATIOS[1],LEFT_WIN_RATIOS[2]];
+	//var leftWins = [0,0,0];
+	var randArr = [];
+	var winSide;
+	var SEP_X = (origW-PIC_SIZE*2)/3;
+	var learnCount = 0;
+	var LEARNING = 0;
+	var TESTING = 1;
+	var END = 2;
+	var state = LEARNING;
+	var winSide;
+	var delay = 0;
+	var DELAY = 5;
+	var canTouch = true;
+	var leftImage;
+	var rightImage;
+	var currentPairInd;
+	var currentTestInd;
+	var currentCompareInd;
+	var flip;
+	
+	
+	function init() 
+	{
+		canvas = document.getElementById("gameCanvas");
+		canvas.width = document.body.clientWidth; //document.width is obsolete
+		canvas.height = document.body.clientHeight; //document.height is obsolete
+		scaleAll = Math.min(canvas.width/origW, canvas.height/origH);
+		canvas.style.backgroundColor = "#FFFFFF";
+		stage = new createjs.Stage(canvas);
+		containAll = new createjs.Container();
+		stage.addChild(containAll);
+		containAll.addEventListener("click", handleClick);
+		containAll.scaleX = containAll.scaleY = scaleAll;
+		containAll.x = canvas.width/2 - origW*scaleAll/2;
+		//start game timer
+		if (!createjs.Ticker.hasEventListener("tick")) {
+			createjs.Ticker.addEventListener("tick", tick);
+		}
+		
+		/*var sh = new createjs.Shape();
+		sh.graphics.beginFill("red");
+		sh.graphics.drawRect(0,0,origW,origH);
+		containAll.addChild(sh);*/
+		
+		for(var i = 0; i < PIC_COUNT; i++)
+		{
+			var img = new Image();
+			img.src = "img/s" + (i+1) + ".jpg";
+			var bitmap = new createjs.Bitmap(img);
+			containAll.addChild(bitmap);
+			bitmap.x = Math.random() * 200;
+			bitmap.y = Math.random() * 200;
+			img.onload = handleLoad;
+			bitmap.visible = false;
+			pics.push(bitmap);
+		}
+		shuffle(pics);
+		
+		//randomise order of learning pairs
+		var q = 0;
+		for(var i = 0; i < LEARN_RUNS*PAIR_COUNT; i++)
+		{
+			randArr.push(q);
+			q++;
+			if(q == PAIR_COUNT) q = 0;
+		}
+		shuffle(randArr);
+		
+		for(var i = 0; i < PAIR_COUNT; i++)
+		{
+			//var debugCnt = 0;
+			for(var q = 0; q < LEARN_RUNS; q++)
+			{
+				if(q < WIN_RATIOS[i]*LEARN_RUNS)
+				{
+					learningWins[i].push(0);
+					//debugCnt++;
+				}
+				else
+				{
+					learningWins[i].push(1);
+				}
+			}
+			//console.log( "ratio " + i + ": " + (debugCnt/LEARN_RUNS) + " ||||| " + debugCnt + " / " + LEARN_RUNS);
+			shuffle(learningWins[i]);
+		}
+		/*
+		for(var i = 0; i < learningWins.length; i++)
+		{	
+			console.log(i + ":");
+			for(var q = 0; q < learningWins[i].length; q++)
+			{
+				console.log(learningWins[i][q]);
+			}
+		}*/
+		console.log(learningWins);
+		
+		messageText = new createjs.Text("choose an image", "20px Arial", "#000000");
+		messageText.lineWidth = 200;
+		messageText.textAlign = "center";
+		containAll.addChild(messageText);
+		messageText.x = origW/2;
+		messageText.y = 30;
+	}
+		
+		function handleLoad()
+	{
+		picLoadCount++;
+		if(picLoadCount == PIC_COUNT)
+		{
+			doLearn();
+		}
+	}
+	
+	function doLearn()
+	{
+		messageText.text = "Choose an image";
+		messageText.color = "#000000";
+		canTouch = true;
+		if(leftImage != undefined)leftImage.visible = rightImage.visible = false;
+		currentPairInd = randArr[learnCount];
+		var firstImage = pics[currentPairInd*2];
+		var secondImage = pics[currentPairInd*2+1];
+		//var firstWin = (Math.random() < WIN_RATIOS[currentPairInd]);
+		flip = (Math.random()>0.5);
+		if(learningWins[currentPairInd].pop() == 0)
+		{
+			winSide = (flip)?RIGHT:LEFT;
+		}
+		else
+		{
+			winSide = (flip)?LEFT:RIGHT;
+		}
+		if(flip)
+		{
+			leftImage = secondImage;
+			rightImage = firstImage;
+		}
+		 else
+		{
+			leftImage = firstImage;
+			rightImage = secondImage;
+		}
+		layoutImages();
+		
+		learnCount++;
+		stage.update();
+	}
+	
+	function doTest()
+	{
+		messageText.text = "Which image is more likely to be correct?";
+		messageText.color = "#000000";
+		canTouch = true;
+		if(leftImage != undefined)leftImage.visible = rightImage.visible = false;
+		currentTestInd = randArr[testCount][0];
+		currentCompareInd = randArr[testCount][1];
+		var firstImage = pics[currentTestInd];
+		var secondImage = pics[currentCompareInd];
+		flip = (Math.random()>0.5);
+		if(flip)
+		{
+			leftImage = secondImage;
+			rightImage = firstImage;
+		}
+		 else
+		{
+			leftImage = firstImage;
+			rightImage = secondImage;
+		}
+		layoutImages();
+		
+		testCount++;
+		stage.update();
+	}
+	
+	function layoutImages()
+	{
+		leftImage.x = origW/2 - (PIC_SIZE + SEP_X/2);
+		rightImage.x = origW/2 + SEP_X/2;
+		leftImage.visible = rightImage.visible = true;
+		leftImage.y = rightImage.y = 80;
+	}
+	
+	function tick(e)
+	{
+		if (delay > 0)
+		{
+			delay --;
+			if (delay == 0)
+			{
+				switch(state)
+				{
+					case LEARNING:
+						doLearn();
+					break;
+					case TESTING:
+						doTest();
+					break;
+					case END:
+						//console.log(testChoices);
+						leftImage.visible = rightImage.visible = false;
+						messageText.y = 100;
+						var posCount = 0;
+						var negCount = 0;
+						for(var i = 0; i < 4; i++)
+						{
+							if(testChoices[0][i] == 1)
+							{
+								posCount++;
+							}
+							if(testChoices[1][i] == 0)
+							{
+								negCount++;
+							}
+						}
+						messageText.text = "go-learning: " + (posCount/4) + "\nno-go learning: " + (negCount/4);
+						messageText.color = "#000000";
+						stage.update();
+					break;
+				}
+			}
+		}
+	}
+	
+	function handleClick(e)
+	{
+		if(canTouch)
+		{
+			var choice = (e.localX < origW/2)?LEFT:RIGHT;
+			canTouch = false;
+			switch(state)
+			{
+			case LEARNING:
+				if(choice == winSide)
+				{
+					messageText.text = "Correct!";
+					messageText.color = "#00DD00";
+				}
+				else
+				{
+					messageText.text = "Wrong!";
+					messageText.color = "#DD0000";
+				}
+				if(learnCount >= LEARN_RUNS*PAIR_COUNT)
+				{
+					randArr = [];
+					for(var i = 0; i < 2; i++)
+					{
+						for(var q = 2; q < PIC_COUNT; q++)
+						{
+							randArr.push([i,q]);
+						}
+					}
+					shuffle(randArr);
+					state = TESTING;
+					delay = DELAY;
+				}
+				else
+				{
+					delay = DELAY;
+				}
+				break;
+			case TESTING:
+				
+				if( (flip && choice == RIGHT) || (!flip && choice == LEFT) )
+				{
+					testChoices[currentTestInd][currentCompareInd-2]++;
+				}
+				if(testCount == randArr.length)
+				{
+					//end
+					state = END;
+					delay = DELAY;
+					messageText.text = "All done!";
+				}
+				else
+				{
+					delay = DELAY;
+					messageText.text = "OK, next one";
+				}
+				break;
+			}
+			stage.update();
+		}
+	}
+	
+	function shuffle(array) 
+	{
+	  var currentIndex = array.length, temporaryValue, randomIndex;
+
+	  // While there remain elements to shuffle...
+	  while (0 !== currentIndex) {
+
+		// Pick a remaining element...
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex -= 1;
+
+		// And swap it with the current element.
+		temporaryValue = array[currentIndex];
+		array[currentIndex] = array[randomIndex];
+		array[randomIndex] = temporaryValue;
+	  }
+
+	  return array;
+	}
+	</script>
+
+</body>
+</html>
+
