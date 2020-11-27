@@ -51,7 +51,8 @@
 	var learnCount = 0;
 	var LEARNING = 0;
 	var TESTING = 1;
-	var END = 2;
+	var WAIT_TESTING = 2;
+	var END = 3;
 	var state = LEARNING;
 	var winSide;
 	var delay = 0;
@@ -243,6 +244,12 @@
 					case TESTING:
 						doTest();
 					break;
+					case WAIT_TESTING:
+						state = TESTING;
+						delay = DELAY;
+						messageText.text = "Test time!";
+						messageText.color = "#000000";
+					break;
 					case END:
 						//console.log(testChoices);
 						leftImage.visible = rightImage.visible = false;
@@ -299,7 +306,7 @@
 						}
 					}
 					shuffle(randArr);
-					state = TESTING;
+					state = WAIT_TESTING;
 					delay = DELAY;
 				}
 				else
