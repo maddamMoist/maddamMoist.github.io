@@ -250,6 +250,7 @@
 						messageText.text = "Test time!";
 						messageText.color = "#000000";
 						console.log("test time");
+						leftImage.visible = rightImage.visible = false;
 					break;
 					case END:
 						//console.log(testChoices);
@@ -308,8 +309,8 @@
 					}
 					shuffle(randArr);
 					state = WAIT_TESTING;
+					console.log("WAIT_TESTING");
 					delay = DELAY;
-					leftImage.visible = rightImage.visible = false;
 				}
 				else
 				{
